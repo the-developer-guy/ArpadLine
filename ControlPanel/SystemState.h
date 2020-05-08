@@ -10,7 +10,8 @@ typedef enum SystemState{/*eseményeket felvinni*/
   SYSTEMSTATE_SILENT_TAMPER,
   SYSTEMSTATE_SILENT_PANIC,
   SYSTEMSTATE_PANIC,
-  SYSTEMSTATE_MAINTANANCE
+  SYSTEMSTATE_MAINTANANCE,
+  SYSTEMSTATE_DOWNLOAD
 };
 
 void systemEventHandler_sabotage(int zoneLevel, int userLevel);
@@ -53,8 +54,22 @@ byte systemEventHandler_arm(int userLevel, bool delayed);
  */
 byte systemEventHandler_disarm(int userLevel);
 /*
- 
+ User osztál hívja belépés után.
+ Ha a SystemState: SYSTEMSTATE_ARMING_DELAYED, SYSTEMSTATE_ARMED, SYSTEMSTATE_MAINTANANCE, SYSTEMSTATE_DOWNLOAD akkor kiriaszt
+ Ha a SystemState: SYSTEMSTATE_PANIC, SYSTEMSTATE_SILENT_PANIC, SYSTEMSTATE_SILENT_ALARM,   SYSTEMSTATE_ALARM: ha a userLevel elég magas akkor törli a riasztást, és kiriaszt.
+ Ha a SystemState: SYSTEMSTATE_TAMPER, SYSTEMSTATE_SILENT_TAMPER: le kell kérni a tamperLevelt, ezt egyeztetni a user levellel. Ha feloldhatja a tamperLevelt, akkor riasztást törölni, egyéb esetben figyelmen kívül hagyni
+ Ha a SystemState: SYSTEMSTATE_DISARMED, figyelmen kívül hagyni
+ SystemState = SYSTEMSTATE_DISARMED
  */
 void systemEventHandler_init();
-void systemEventHandler_downloadeMode();
+/*
+ Egyenlőre fogalmam sincs mit fog csinálni.
+ */
+void systemEventHandler_downloadeMode(int userLevel);
+/*
+ Későbbi letöltési módhoz előkészítés, a maintenance módból hozható elő, egy kb fél zombi állapot ahol a beállításokat, és klónozást lehet elvégezni.
+ */
 void systemEventHandler_maintenanceMode();
+/*
+ Kezelő hívja meg, hogy telepítő vagy maintenance módba kerüljön a rendszer. Ezt a userLevel dönti el, hogy mire van jogosultság. 
+ */
