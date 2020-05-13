@@ -1,0 +1,7 @@
+{
+    "port": "COM1",
+    "board": "arduino:avr:mega",
+    "configuration": "cpu=atmega2560",
+    "programmer": "AVR ISP",
+    "sketch": "ControlPanel\\ControlPanel.ino"
+}
