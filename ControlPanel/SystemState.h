@@ -1,4 +1,4 @@
-#include "Arduino.h"
+#include <Arduino.h>
 typedef enum SystemState{/*eseményeket felvinni*/
   SYSTEMSTATE_INIT, /*Alapállapot közvetlen indulás után. A systemEventHandler_init() függvény lefutása után vált át, ha ebben a függvényben bármi történik akkor SYSTEMSTATE_INIT állapotban marad..*/
   SYSTEMSTATE_DISARMED,
@@ -13,6 +13,9 @@ typedef enum SystemState{/*eseményeket felvinni*/
   SYSTEMSTATE_MAINTANANCE,
   SYSTEMSTATE_DOWNLOAD
 };
+
+
+byte isSystemArmed();
 
 void systemEventHandler_init();
 /*
@@ -40,7 +43,7 @@ TO_USE: ha valamelyik zóna/partíció szabotázs állapotba kerül.
  */
 void systemEventHandler_alarm(int zoneLevel, bool delayed);
 /*
-TO_USE:
+TO_USE: Zóna/partíció sértés esetén.
 */
 /*
     - Ha a SystemState:
