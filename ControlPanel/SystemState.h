@@ -14,7 +14,15 @@ typedef enum SystemState{/*eseményeket felvinni*/
   SYSTEMSTATE_DOWNLOAD
 };
 
+void systemEventHandler_init();
+/*
+TO_USE: rendszer indításkor kell hívni, betölti a korábbi állapotot ha volt, vagy alapállapotot állít be.
+*/
+
 void systemEventHandler_sabotage(int zoneLevel, int userLevel);
+/*
+TO_USE: ha valamelyik zóna/partíció szabotázs állapotba kerül.
+*/
 /*
  Zóna szabotázs esetén hívjuk meg. A zóna kezelő osztály hívja meg, átadja a szabotázsban lévő zóna számát, és ha van a bejelentkezett felhasználó szintjét.
  Ha a userLevel = 0, akkor meghívjuk a "riasztás" függvényt. Különben:
@@ -32,6 +40,9 @@ void systemEventHandler_sabotage(int zoneLevel, int userLevel);
  */
 void systemEventHandler_alarm(int zoneLevel, bool delayed);
 /*
+TO_USE:
+*/
+/*
     - Ha a SystemState:
      - SYSTEMSTATE_DISARMED, SYSTEMSTATE_INIT, SYSTEMSTATE_DOWNLOAD, SYSTEMSTATE_MAINTANANCE, SYSTEMSTATE_SILENT_PANIC, SYSTEMSTATE_ALARM: figyelmen kívül hagyjuk.
      - Minden más esetben a delayed idő kivárása után "riasztás"
@@ -42,7 +53,7 @@ void systemEventHandler_silentAlarm(bool panic, int delayToAlarm); /*Kell ez nek
   - Propertyben meghatározott silentAlarmDelay eltelte után a riasztást néma állapotra teszi.
   SystemState = SYSTEMSTATE_SILENT_ALARM
  */
-byte systemEventHandler_arm(int userLevel, bool delayed);
+int systemEventHandler_arm(int userLevel, bool delayed);
 /*
  Ezt az autentikáció után hívjuk meg. 
  Hiba kóddal térünk vissza:
