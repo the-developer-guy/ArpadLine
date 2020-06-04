@@ -1,12 +1,28 @@
 #include <Arduino.h>
-#include "zonemanager.h"
+#include "ZoneManager.h"
 
-static zone_t zones[MAX_NUMBER_OF_ZONES];
+zone_t zones[MAX_NUMBER_OF_ZONES];
 
+typedef union{ 
+   uint32_t value;
+   uin lo, hi; } _intchars;
+
+void zone_Manager_init(){
+  /*
+   * Állapot betöltése az eepromból (megszakítás)
+   * zoneManager_initZone() egyenként az össze zónára
+   */
+}
+void zoneManager_reset() {
+  for(int zoneIndex = 0; zoneIndex < MAX_NUMBER_OF_ZONES; zoneIndex++){
+    zoneManager_resetZone(zoneIndex);
+  }  
+}
 void zoneManager_resetZone(unsigned int zoneIndex){
   zones[zoneIndex].state = ZONE_STATE_UNUSED;
   zones[zoneIndex].type = ZONE_TYPE_NULL;
-  zones[zoneIndex].deviceHandler = 0;
+  zones[zoneIndex].state_to_change = ZONE_STATE_UNUSED;
+  zones[zoneIndex].state_change_delay = ZONE_STATE_CHANGE_DELAY;
   zones[zoneIndex].partitionFlag = 0;
 }
 void zoneManager_setZoneState(unsigned int zoneIndex, ZoneState zoneState){
@@ -33,50 +49,82 @@ bool zoneManager_isZoneInpartition(unsigned int zoneIndex, unsigned int partitio
   uint16_t mask = 1 << partitionIndex; 
   return (zones[zoneIndex].partitionFlag & mask) != 0;  
 }
-int zoneManager_bindDeviceToZone(unsigned int zoneIndex, ZoneType zoneType, deviceHandler_t deviceHandler, bool force){
-  if(zones[zoneIndex].state != ZONE_STATE_UNUSED && !force){
-    return -1;
-  }
-  zones[zoneIndex].state = ZONE_STATE_INACTIVE;
-  zones[zoneIndex].type = zoneType;
-  zones[zoneIndex].deviceHandler = 0;
-  zones[zoneIndex].partitionFlag = 0;
-  return 0;
-}
-void zoneManager_checkAllZones(){
-  checkresult_t checkResult;
+void zoneManager_update(){
+  ZoneState state;
   
+  /*
+   * if(system manager -> rendszer nincs élesítve) return;
+   */
+
   for(int zoneIndex = 0; zoneIndex < MAX_NUMBER_OF_ZONES; zoneIndex++){
-    if(zones[zoneIndex].state < ZONE_STATE_ARMED)
-    {
+    if(zones[zoneIndex].state == ZONE_STATE_UNUSED){
       continue;
     }
-    if(zones[zoneIndex].deviceHandler){
-      if(zones[zoneIndex].deviceHandler(zoneIndex, &checkResult) == -1){
-       /*
-        * -1-gyel tért vissza, teendő van a checkResult alapján.
-        * 
-        * Itt jönnek képbe a particiók? 
-        * Vagy csak csoportos zone.state állítással le van tudva?
-        * 
-        * VAGY:
-        * Ki értesíti a SystemStatet? 
-        * Az eszköz állíthatná a zóna állapotát (zoneManager_(zoneIndex) hívással)?
-        * Esetleg a systemState, ha az ezköz értesíti őt?
-        */
+
+    /*
+     * ZoneState state = deviceManager_getState[zoneIndex];
+     */
+    
+    if(state == zones[zoneIndex].state){
+      continue;
+    }
+    if(state == zones[zoneIndex].state_to_change){
+      if(zones[zoneIndex].state_change_delay > 0){
+        zones[zoneIndex].state_change_delay -= 1;
       }
-      else {
+      else{
+        zones[zoneIndex].state = state;
         /*
-         * Minden OK valószínűleg nincs teendő, nem kell ez az ág.
+         * megváltozott az állapot, system managert értesíteni
          */
       }
     }
-    else
-    {
-      /*
-       * A zóna élesítve van, de nincs eszköz hozzá. Lehet ilyen?
-       */
+    else{
+      zones[zoneIndex].state_to_change = state;
+      zones[zoneIndex].state_change_delay = ZONE_STATE_CHANGE_DELAY;    
     }
-    
   }
 }
+void zoneManager_initZone(unsigned int zoneIndex, uint32_t serializedData){
+  zoneManager_resetZone(zoneIndex);
+  
+  unsigned int* partition_value_ptr = (unsigned int*)&serializedData;
+  zones[zoneIndex].partitionFlag = *partition_value_ptr;
+  
+  byte* type_value_ptr = (byte*)&serializedData + 2;
+  zones[zoneIndex].type = *type_value_ptr;
+}
+uint32_t zoneManager_serializeZone(unsigned int zoneIndex){
+  uint32_t serializedData;
+
+  unsigned int* partition_value_ptr = (unsigned int*)&serializedData;
+  *partition_value_ptr = zones[zoneIndex].partitionFlag;
+  
+  byte* type_value_ptr = (byte*)&serializedData + 2;
+   *type_value_ptr = zones[zoneIndex].type;
+
+  return serializedData;
+}
+
+/*
+B Terv
+
+//a headerbe
+struct zone_serialized_t{
+  uint16_t partitionFlag;  
+  byte type;
+}
+
+//akkor csak 3 byte kell
+EEPROM.get(address, zone_serialized_t)
+ 
+void zoneManager_initZone(unsigned int zoneIndex, zone_serialized_t& serializedData){
+  zoneManager_resetZone(zoneIndex);
+  zones[zoneIndex].partitionFlag = serializedData.partitionFlag;
+  zones[zoneIndex].type = serializedData.type;
+}
+void zoneManager_serializeZone(unsigned int zoneIndex, zone_serialized_t& serializedData){
+  serializedData.partitionFlag =  zones[zoneIndex].partitionFlag;
+  serializedData.type =  zones[zoneIndex].type;
+}
+*/
